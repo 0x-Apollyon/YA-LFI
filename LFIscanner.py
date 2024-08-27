@@ -79,25 +79,25 @@ def use_payload(x,payloads_per_thread,payload_path,target_url):
 
 selected_payload_file = parse.payload.lower()
 
-
-if selected_payload_file in ("all_os" , "all_os.txt" , "allos" , "allos.txt"):
-	print("Using payloads for all OS servers")
-	payload_count = payload_counter("all_os.txt")
-	payload_path = "all_os.txt"
-elif selected_payload_file in ("linux" , "linux.txt"):
-	print("Using payloads for linux servers")
-	payload_path = "linux.txt"
-	payload_count = payload_counter("linux.txt")
-elif selected_payload_file in ("windows" , "windows.txt"):
-	print("Using payloads for windows servers")
-	payload_path = "windows.txt"
-	payload_count = payload_counter("windows.txt")
-else:
-	if os.path.isfile(selected_payload_file):
-		payload_path = selected_payload_file
-	else:
-		print("[X] SPECIFIED PAYLOAD FILE NOT FOUND")
-		quit()
+match selected_payload_file:
+    case "all_os" | "all_os.txt" | "allos" | "allos.txt":
+        print("Using payloads for all OS servers")
+        payload_path = "all_os.txt"
+        payload_count = payload_counter(payload_path)
+    case "linux" | "linux.txt":
+        print("Using payloads for linux servers")
+        payload_path = "linux.txt"
+        payload_count = payload_counter(payload_path)
+    case "windows" | "windows.txt":
+        print("Using payloads for windows servers")
+        payload_path = "windows.txt"
+        payload_count = payload_counter(payload_path)
+    case _:
+        if os.path.isfile(selected_payload_file):
+            payload_path = selected_payload_file
+        else:
+            print("[X] SPECIFIED PAYLOAD FILE NOT FOUND")
+            quit()
 
 if parse.url:
 	print(f"RUNNING ON TARGET ---> {parse.url}")
