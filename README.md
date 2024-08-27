@@ -7,8 +7,8 @@
 ███   ███   ███    ███          ███         ███        ███  
 ███   ███   ███    ███          ███▌    ▄   ███        ███  
  ▀█████▀    ███    █▀           █████▄▄██   ███        █▀   
-                                ▀    
-    </pre>                            
+                                ▀    </pre>
+                                
 ### Yet another - local file inclusion scanner
 ##### By: Apollyon
 ##### Based on: LFIScanner by R3LI4NT  
