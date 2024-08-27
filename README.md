@@ -57,7 +57,7 @@ WARNING: DO NOT RUN WITHOUT A PARAMETER IN THE URL
 
 ## Other amazing third party wordlists
 
-[Linux wordlist](https://github.com/carlospolop/Auto_Wordlists/blob/main/wordlists/file_inclusion_linux.txt)
+[Linux wordlist](https://github.com/carlospolop/Auto_Wordlists/blob/main/wordlists/file_inclusion_linux.txt) <br>
 [Windows wordlist](https://github.com/carlospolop/Auto_Wordlists/blob/main/wordlists/file_inclusion_windows.txt)
 
 ## Most common parameters
