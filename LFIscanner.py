@@ -124,7 +124,7 @@ match selected_payload_file:
 
 if parse.url:
 	print(f"RUNNING ON TARGET ---> {parse.url}")
-	if r"https://" in parse.url:
+	if r"https://" in parse.url or r"http://" in parse.url:
 		current_target = parse.url
 	else:
 		current_target = r"https://" + parse.url
