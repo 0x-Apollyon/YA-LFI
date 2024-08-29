@@ -57,6 +57,11 @@ python LFIscanner.py -u https://example.com?param= -p windows.txt
 ```
 WARNING: DO NOT RUN WITHOUT A PARAMETER IN THE URL
 
+![image](https://github.com/user-attachments/assets/4e07bcd8-21a2-43e4-8551-8006460f8ce7) <br>
+![image](https://github.com/user-attachments/assets/be6ae5a0-376b-4a95-899b-3f4d47c933fd)
+
+
+
 ## Other amazing third party wordlists
 
 [Linux wordlist](https://github.com/carlospolop/Auto_Wordlists/blob/main/wordlists/file_inclusion_linux.txt) <br>
