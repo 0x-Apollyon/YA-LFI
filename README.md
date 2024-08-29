@@ -18,6 +18,7 @@
 | ------------- | ------------- |
 | -h / --help | Request help |
 | -u / --url | Target Website |
+| -ulist / --url_list | Target multiple websites from file |
 | -p / --payload | Payload file |
 | -e / --extract | Extract content |
 | -t / --threads | Multi threaded scanning |
