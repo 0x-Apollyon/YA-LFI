@@ -19,6 +19,7 @@
 | -h / --help | Request help |
 | -u / --url | Target Website |
 | -ulist / --url_list | Target multiple websites from file |
+| -wiz / --wizard | Wizard for new users |
 | -p / --payload | Payload file |
 | -e / --extract | Extract content |
 | -t / --threads | Multi threaded scanning |
@@ -44,9 +45,19 @@ pip install -r requirements.txt
 
 ## Usage
 
+You can run it using commands given below or use the wizard
+
+View help
+```
+python LFIscanner.py -h
+```
 Default usage
 ```
 python LFIscanner.py -u https://example.com?param= -p all_os.txt
+```
+Using with wizard
+```
+python LFIscanner.py -wiz
 ```
 Linux wordlist
 ```
