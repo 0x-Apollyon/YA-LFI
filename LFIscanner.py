@@ -35,8 +35,9 @@ Based on: LFIScanner by R3LI4NT
 parse = argparse.ArgumentParser()
 parse.add_argument('-u','--url',help="Target URL",required=False)
 parse.add_argument('-ulist','--url_list',help="Target multiple URLs from a file",required=False)
+parse.add_argument('-wiz','--wizard',help="Run the wizard, for beginner and first time users",required=False,default=False, action = "store_true")
 parse.add_argument('-e','--extract',help="Extract content", action='store_true',required=False)
-parse.add_argument('-p','--payload',help="Payloads file [Pre installed lists: all_os.txt , linux.txt , windows.txt]",required=True)
+parse.add_argument('-p','--payload',help="Payloads file [Pre installed lists: all_os.txt , linux.txt , windows.txt]",required=False)
 parse.add_argument('-t','--threads',help="Threads [5 by default]",default=5,required=False)
 parse.add_argument('-pr','--proxy',help="Add a list of proxies to use [HTTP, HTTPS, SOCKS]",required=False)
 parse.add_argument('-auth','--authentication',help="Load headers and/or cookies from a file to run a scan while authenticated",required=False,default="auth.json")
@@ -147,34 +148,39 @@ def use_payload(x,payloads_per_thread,payload_path,target_url,targets_path,cooki
 	else:
 		check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,cookies,headers)
 
-selected_payload_file = parse.payload.lower()
+def count_payloads(payload_input):
+	match payload_input:
+		case "all_os" | "all_os.txt" | "allos" | "allos.txt" | "1":
+			print("[*] USING PAYLOADS FOR ALL OS SERVERS")
+			payload_path = "all_os.txt"
+			payload_count = payload_counter(payload_path)
+		case "linux" | "linux.txt" | "2":
+			print("[*] USING PAYLOADS FOR LINUX SERVERS")
+			payload_path = "linux.txt"
+			payload_count = payload_counter(payload_path)
+		case "windows" | "windows.txt" | "3":
+			print("[*] USING PAYLOADS FOR WINDOWS SERVERS")
+			payload_path = "windows.txt"
+			payload_count = payload_counter(payload_path)
+		case _:
+			if os.path.isfile(selected_payload_file):
+				payload_path = selected_payload_file
+			else:
+				print("[X] SPECIFIED PAYLOAD FILE NOT FOUND")
+				quit()
 
-match selected_payload_file:
-    case "all_os" | "all_os.txt" | "allos" | "allos.txt":
-        print("[*] USING PAYLOADS FOR ALL OS SERVERS")
-        payload_path = "all_os.txt"
-        payload_count = payload_counter(payload_path)
-    case "linux" | "linux.txt":
-        print("[*] USING PAYLOADS FOR LINUX SERVERS")
-        payload_path = "linux.txt"
-        payload_count = payload_counter(payload_path)
-    case "windows" | "windows.txt":
-        print("[*] USING PAYLOADS FOR WINDOWS SERVERS")
-        payload_path = "windows.txt"
-        payload_count = payload_counter(payload_path)
-    case _:
-        if os.path.isfile(selected_payload_file):
-            payload_path = selected_payload_file
-        else:
-            print("[X] SPECIFIED PAYLOAD FILE NOT FOUND")
-            quit()
+	return payload_count , payload_path
+
+
 
 global proxies_but_dict
 global proxy_running
 
-if parse.proxy:
+def load_proxies(proxy_path):
+	global proxies_but_dict
+	global proxy_running
+
 	proxy_running = True
-	proxy_path = parse.proxy
 	if os.path.isfile(proxy_path):
 		with open(proxy_path , "r") as proxy_file:
 			proxies = proxy_file.readlines()
@@ -201,6 +207,10 @@ if parse.proxy:
 		print("[X] PROXY FILE PATH DOES NOT EXIST")
 		quit()
 
+
+if parse.proxy:
+	load_proxies(parse.proxy.lower())
+
 headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 OPR/109.0.0.0',
 		"Accept-Language": "en-US,en;q=0.6",
@@ -209,8 +219,7 @@ headers = {
 cookies = {}
 #default headers
 
-if parse.authentication:
-	auth_path = parse.authentication
+def load_authentication(auth_path , headers , cookies):
 	if os.path.isfile(auth_path):
 		with open(auth_path , "r") as auth_file:
 			auth_data = auth_file.read()
@@ -221,31 +230,123 @@ if parse.authentication:
 				headers[header] = auth_data["auth_headers"][header]
 		if auth_data["cookies"]:
 			cookies = auth_data["cookies"]
-
-
-
-if parse.url:
-	print(f"[*] RUNNING ON TARGET ---> {parse.url}")
-	if r"https://" in parse.url or r"http://" in parse.url:
-		current_target = parse.url
 	else:
-		current_target = r"https://" + parse.url
+		print("[X] AUTH FILE DOES NOT EXIST")
+	
+	return headers,cookies
 
-	payloads_per_thread = payload_count//int(parse.threads)
+if parse.authentication:
+	load_authentication(parse.authentication , headers , cookies)
 
-	for x in range(int(parse.threads)):
-		threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers)).start()	
-else:
-	print(f"[*] RUNNING ON MULTIPLE TARGETS")
-	url_list_path = parse.url_list.lower()
-	if url_list_path:
-		if os.path.isfile(url_list_path):
-			payloads_per_thread = payload_count//int(parse.threads)
 
-			for x in range(int(parse.threads)):
-				threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers)).start()	
-		else:
-			print("[X] GIVEN TARGET URL FILE NOT FOUND")	
+
+if not parse.wizard:
+	if parse.payload:
+		payload_count , payload_path = count_payloads(parse.payload.lower())
 	else:
-		print("[X] NO TARGET URL SPECIFIED")
+		print("[X] NO PAYLOAD FILE SPECIFIED")
 		quit()
+	if parse.url:
+		print(f"[*] RUNNING ON TARGET ---> {parse.url}")
+		if r"https://" in parse.url or r"http://" in parse.url:
+			current_target = parse.url
+		else:
+			current_target = r"https://" + parse.url
+
+		payloads_per_thread = payload_count//int(parse.threads)
+
+		for x in range(int(parse.threads)):
+			threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers)).start()	
+	else:
+		print(f"[*] RUNNING ON MULTIPLE TARGETS")
+		url_list_path = parse.url_list.lower()
+		if url_list_path:
+			if os.path.isfile(url_list_path):
+				payloads_per_thread = payload_count//int(parse.threads)
+
+				for x in range(int(parse.threads)):
+					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers)).start()	
+			else:
+				print("[X] GIVEN TARGET URL FILE NOT FOUND")	
+		else:
+			print("[X] NO TARGET URL SPECIFIED")
+			quit()
+else:
+	target_mode = input("YA-LFI Wizard | Do you want to check a [1]single URL or a [2]multiple URLs :").strip().lower()
+	match target_mode:
+		case "2" | "multiple":
+			url_list_path = input("YA-LFI Wizard | Enter the file path from where you want to get the URLs to scan :").strip()
+			if os.path.isfile(url_list_path):
+				threads_count = input("YA-LFI Wizard | How many threads do you want to use :").strip()
+				try:
+					if threads_count:
+						threads_count = int(threads_count)
+					else:
+						threads_count = 5
+				except:
+					threads_count = 5
+
+				payload_file = input("YA-LFI Wizard | Enter the path to payload list you want to use [Builtins: [1]all_os.txt , [2]linux.txt , [3]windows.txt]:").strip().lower()
+
+				payload_count , payload_path = count_payloads(payload_file)
+				payloads_per_thread = payload_count//threads_count
+
+				proxy_file = input("YA-LFI Wizard | Enter the path for the proxy file if you want to use them, leave blank or enter no if you dont want to use proxies").strip().lower()
+				if proxy_file:
+					load_proxies(proxy_file)
+				
+				auth_file = input("YA-LFI Wizard | Enter the path for auth headers and cookies if you want to use them, leave blank or enter no if you dont want to scan without auth :").strip().lower()
+
+				if auth_file:
+					headers , cookies = load_authentication(auth_file , headers , cookies)
+
+
+				for x in range(threads_count):
+					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers)).start()	
+			else:
+				print("[X] GIVEN TARGET URL FILE NOT FOUND")	
+
+		case "1" | "single":
+			current_target= input("YA-LFI Wizard | Enter the URL to scan :").strip()
+
+			print(f"[*] RUNNING ON TARGET ---> {current_target}")
+			if r"https://" in current_target or r"http://" in current_target:
+				current_target = current_target
+			else:
+				current_target = r"https://" + current_target
+
+			threads_count = input("YA-LFI Wizard | How many threads do you want to use :").strip()
+			try:
+				if threads_count:
+					threads_count = int(threads_count)
+				else:
+					threads_count = 5
+			except:
+				threads_count = 5
+
+			payload_file = input("YA-LFI Wizard | Enter the path to payload list you want to use [Builtins: [1]all_os.txt , [2]linux.txt , [3]windows.txt]:").strip().lower()
+
+			payload_count , payload_path = count_payloads(payload_file)
+			payloads_per_thread = payload_count//threads_count
+
+			proxy_file = input("YA-LFI Wizard | Enter the path for the proxy file if you want to use them, leave blank or enter no if you dont want to use proxies").strip().lower()
+			if proxy_file:
+				load_proxies(proxy_file)
+				
+			auth_file = input("YA-LFI Wizard | Enter the path for auth headers and cookies if you want to use them, leave blank or enter no if you dont want to scan without auth :").strip().lower()
+
+			if auth_file:
+				headers , cookies = load_authentication(auth_file , headers , cookies)
+
+
+			payloads_per_thread = payload_count//threads_count
+
+			for x in range(threads_count):
+				threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers)).start()
+
+		case _:	
+			print("[X] NOT A VALID OPTION PLEASE RE LAUNCH THE PROGRAM AND SELECT AN AVAILABLE OPTION")
+			quit()
+			
+
+	
