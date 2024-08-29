@@ -8,6 +8,7 @@ import time
 from urllib3.exceptions import NameResolutionError
 from requests.exceptions import RequestException
 import random
+from threading import Lock
 import json
 
 if os.name == "nt":
@@ -41,6 +42,8 @@ parse.add_argument('-pr','--proxy',help="Add a list of proxies to use [HTTP, HTT
 parse.add_argument('-auth','--authentication',help="Load headers and/or cookies from a file to run a scan while authenticated",required=False,default="auth.json")
 parse.add_argument('-save','--save_to_file',help="Save working LFI payloads by writing them to a file",required=False,default="LFI_scanner_saves.txt")
 parse = parse.parse_args()
+
+lock = Lock()
 
 
 def payload_counter(payload_file_path):
@@ -94,13 +97,17 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 					if parse.save_to_file:
 						save_file_path = parse.save_to_file
 						if os.path.isfile(save_file_path):
+							lock.acquire()
 							with open(save_file_path , "a") as save_file:
 								save_file.write(target_url+p)
 								save_file.write("\n")
+							lock.release()
 						else:
+							lock.acquire()
 							with open(save_file_path , "w") as save_file:
 								save_file.write(target_url+p)
 								save_file.write("\n")
+							lock.release()
 						print(f"LFI DETECTED: Saved to save file \n")
 					print("="*10)
 			pointer_line = pointer_line + 1
