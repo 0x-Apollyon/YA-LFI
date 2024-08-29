@@ -6,8 +6,7 @@
 ▄██   ███ ▀███████████  ██████  ███       ▀▀███▀▀▀     ███▌ 
 ███   ███   ███    ███          ███         ███        ███  
 ███   ███   ███    ███          ███▌    ▄   ███        ███  
- ▀█████▀    ███    █▀           █████▄▄██   ███        █▀   
-                                ▀    </pre>
+ ▀█████▀    ███    █▀           █████▄▄██   ███        █▀   </pre>
                                 
 ### Yet another - local file inclusion scanner
 ##### By: Apollyon
@@ -22,6 +21,9 @@
 | -p / --payload | Payload file |
 | -e / --extract | Extract content |
 | -t / --threads | Multi threaded scanning |
+| -pr / --proxy | Using proxies (HTTP, HTTPS, SOCKS) |
+| -auth / --authentication | Authentication using headers and/or cookies |
+| -save / --save_to_file | Saves valid payloads to file on disk |
 
 ## Installation
 Normal
@@ -43,15 +45,15 @@ pip install -r requirements.txt
 
 Default usage
 ```
-python LFIscanner.py -u https://example.com?param= -p all_os.txt -t 10
+python LFIscanner.py -u https://example.com?param= -p all_os.txt
 ```
 Linux wordlist
 ```
-python LFIscanner.py -u https://example.com?param= -p linux.txt -t 10
+python LFIscanner.py -u https://example.com?param= -p linux.txt 
 ```
 Windows wordlist
 ```
-python LFIscanner.py -u https://example.com?param= -p windows.txt -t 10
+python LFIscanner.py -u https://example.com?param= -p windows.txt
 ```
 WARNING: DO NOT RUN WITHOUT A PARAMETER IN THE URL
 
