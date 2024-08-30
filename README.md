@@ -24,6 +24,8 @@
 | -e / --extract | Extract content |
 | -t / --threads | Multi threaded scanning |
 | -pr / --proxy | Using proxies (HTTP, HTTPS, SOCKS) |
+| -tr / --tor | Use Tor for connections with separate instances per thread |
+| -rotate / --tor-rotation | Rotate Tor IP after N requests (requires --tor and int) |
 | -auth / --authentication | Authentication using headers and/or cookies |
 | -save / --save_to_file | Saves valid payloads to file on disk |
 
