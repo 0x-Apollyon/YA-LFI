@@ -238,12 +238,14 @@ headers = {
 	"Accept-Encoding": "gzip, deflate, br, zstd"
 }
 cookies = {}
+#default headers
 
 def load_authentication(auth_path , headers , cookies):
 	if os.path.isfile(auth_path):
 		with open(auth_path , "r") as auth_file:
 			auth_data = auth_file.read()
 		auth_data = json.loads(auth_data)
+		#loading headers
 		if auth_data["auth_headers"]:
 			for header in auth_data["auth_headers"]:
 				headers[header] = auth_data["auth_headers"][header]
@@ -319,11 +321,11 @@ else:
 				payload_count , payload_path = count_payloads(payload_file)
 				payloads_per_thread = payload_count//threads_count
 
-				proxy_file = input("YA-LFI Wizard | Enter the path for the proxy file if you want to use them, leave blank o enter no if you dont want to use proxies").strip().lower()
+				proxy_file = input("YA-LFI Wizard | Enter the path for the proxy file if you want to use them, leave blank or enter no if you dont want to use proxies").strip().lower()
 				if proxy_file:
 					load_proxies(proxy_file)
 
-				auth_file = input("YA-LFI Wizard | Enter the path for auth headers and cookies if you want to use them, leave blank o enter no if you dont want to scan without auth :").strip().lower()
+				auth_file = input("YA-LFI Wizard | Enter the path for auth headers and cookies if you want to use them, leave blank or enter no if you dont want to scan without auth :").strip().lower()
 
 				if auth_file:
 					headers , cookies = load_authentication(auth_file , headers , cookies)
@@ -368,11 +370,11 @@ else:
 			payload_count , payload_path = count_payloads(payload_file)
 			payloads_per_thread = payload_count//threads_count
 
-			proxy_file = input("YA-LFI Wizard | Enter the path for the proxy file if you want to use them, leave blank o enter no if you dont want to use proxies").strip().lower()
+			proxy_file = input("YA-LFI Wizard | Enter the path for the proxy file if you want to use them, leave blank or enter no if you dont want to use proxies").strip().lower()
 			if proxy_file:
 				load_proxies(proxy_file)
 
-			auth_file = input("YA-LFI Wizard | Enter the path for auth headers and cookies if you want to use them, leave blank o enter no if you dont want to scan without auth :").strip().lower()
+			auth_file = input("YA-LFI Wizard | Enter the path for auth headers and cookies if you want to use them, leave blank or enter no if you dont want to scan without auth :").strip().lower()
 
 			if auth_file:
 				headers , cookies = load_authentication(auth_file , headers , cookies)
@@ -397,3 +399,4 @@ else:
 		case _:
 			print("[X] NOT A VALID OPTION PLEASE RE LAUNCH THE PROGRAM AND SELECT AN AVAILABLE OPTION")
 			quit()
+			
