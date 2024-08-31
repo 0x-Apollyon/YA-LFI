@@ -3,6 +3,7 @@ import time
 import subprocess
 import socket
 import shutil
+import requests
 from stem import Signal
 from stem.control import Controller
 
