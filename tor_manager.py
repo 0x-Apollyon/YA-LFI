@@ -6,23 +6,62 @@ import shutil
 import requests
 from stem import Signal
 from stem.control import Controller
+import sys
+
+tor_executable = None
+
+def is_tor_running(port=9050):
+	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+		result = sock.connect_ex(('127.0.0.1', port))
+		return result == 0
 
 def start_tor_service():
-	try:
-		subprocess.call(['sudo', 'service', 'tor', 'start'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-		print("[*] TOR SERVICE STARTED")
-	except Exception as e:
-		print(f"[X] Failed to start Tor service: {str(e)}")
+	global tor_executable
+	
+	if os.name == "nt":
+		tor_executable = "C:\\Tor\\tor\\tor.exe"
+	elif sys.platform == "darwin":
+		tor_executable = "/opt/homebrew/bin/tor"
+		if not os.path.exists(tor_executable):
+			tor_executable = "/usr/local/bin/tor"
+	else:
+		tor_executable = "/usr/bin/tor"
+
+	if not os.path.exists(tor_executable):
+		print("[X] TOR EXECUTABLE NOT FOUND\n[?] MAKE SURE YOU HAVE TOR INSTALLED")
+		sys.exit(1)
+
+	if not is_tor_running():
+		print("[!] TOR IS NOT RUNNING\n[X] PLEASE START THE TOR SERVICE AND TRY AGAIN")
+		sys.exit(1)
+	else:
+		print("[*] TOR IS RUNNING")
 
 def clean_up(tor_base_port=9050, tor_control_base_port=9151, total_instances=5, tor_data_dir="/tmp/tor_profiles"):
 	try:
-		subprocess.call(['killall', 'tor'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+		if os.name != "nt":
+			subprocess.call(['killall', 'tor'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+		else:
+			for port in range(tor_base_port, tor_base_port + total_instances * 10, 10):
+				os.system(f"netstat -ano | findstr :{port} | findstr LISTENING | for /f \"tokens=5\" %a in ('more') do taskkill /PID %a /F")
 		time.sleep(1)
 		for port in range(tor_base_port, tor_base_port + total_instances * 10, 10):
 			if is_port_open(port):
-				os.system(f"fuser -k {port}/tcp")
+				if os.name == "nt":
+					os.system(f"netstat -ano | findstr :{port} | findstr LISTENING | for /f \"tokens=5\" %a in ('more') do taskkill /PID %a /F")
+				else:
+					try:
+						subprocess.call(['fuser', '-k', f'{port}/tcp'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+					except FileNotFoundError:
+						subprocess.call(['lsof', '-ti', f'tcp:{port}', '|', 'xargs', 'kill'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 			if is_port_open(port + 101):
-				os.system(f"fuser -k {port + 101}/tcp")
+				if os.name == "nt":
+					os.system(f"netstat -ano | findstr :{port + 101} | findstr LISTENING | for /f \"tokens=5\" %a in ('more') do taskkill /PID %a /F")
+				else:
+					try:
+						subprocess.call(['fuser', '-k', f'{port + 101}/tcp'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+					except FileNotFoundError:
+						subprocess.call(['lsof', '-ti', f'tcp:{port + 101}', '|', 'xargs', 'kill'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 		if os.path.exists(tor_data_dir):
 			shutil.rmtree(tor_data_dir)
 		time.sleep(3)
@@ -47,7 +86,7 @@ def create_tor_instance(thread_num, tor_base_port=9050, tor_control_base_port=91
 		with open(torrc_path, 'w') as torrc_file:
 			torrc_file.write(torrc_content)
 		try:
-			subprocess.Popen(['/usr/bin/tor', '-f', torrc_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+			subprocess.Popen([tor_executable, '-f', torrc_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 			time.sleep(5)
 			with Controller.from_port(port=tor_control_base_port + thread_num * 10) as controller:
 				controller.authenticate()

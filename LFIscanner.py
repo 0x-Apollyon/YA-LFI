@@ -11,6 +11,7 @@ import random
 from threading import Lock
 import json
 import tor_manager
+from open_custom import open_custom
 
 if os.name == "nt":
 	os.system("cls")
@@ -53,7 +54,7 @@ if parse.tor:
 	tor_manager.start_tor_service()
 
 def payload_counter(payload_file_path):
-	with open(payload_file_path, 'rb+') as f:
+	with open_custom(payload_file_path, 'rb+') as f:
 		mm = mmap.mmap(f.fileno(), 0)
 		lines = 0
 		while mm.readline():
@@ -63,7 +64,7 @@ def payload_counter(payload_file_path):
 
 def load_internal_payloads(payload_path):
 	if os.path.isfile(payload_path):
-		payloads = open(payload_path,'r')
+		payloads = open_custom(payload_path,'r')
 		return payloads
 	else:
 		print("[X] SPECIFIED PAYLOADS NOT FOUND. PLEASE REINSTALL TOOL OR PAYLOAD FILE")
@@ -71,7 +72,7 @@ def load_internal_payloads(payload_path):
 
 def load_file_payloads():
 	if os.path.isfile("files.txt"):
-		with open("files.txt", "r") as file:
+		with open_custom("files.txt", "r") as file:
 			return [line.strip() for line in file.readlines()]
 	else:
 		print("[X] 'files.txt' NOT FOUND")
@@ -84,7 +85,7 @@ def check_single_url_with_payload(x, payloads_per_thread, payload_path, target_u
 	global proxies_but_dict
 	global proxy_running
 	payloads = load_internal_payloads(payload_path)
-	file_payloads = load_file_payloads() if "{FILE}" in open(payload_path).read() else [None]
+	file_payloads = load_file_payloads() if "{FILE}" in open_custom(payload_path).read() else [None]
 
 	payload_count = 0
 	pointer_line = 0
@@ -131,7 +132,7 @@ def check_single_url_with_payload(x, payloads_per_thread, payload_path, target_u
 						query = requests.get(target_url+payload, headers=headers, cookies=cookies)
 
 					if any(keyword in query.text.lower() for keyword in ["captcha", "denied", "please wait"]):
-						print('[X] CAPTCHA OR BLOCK DETECTED.')
+						print('[X] CAPTCHA OR BLOCK DETECTED')
 						time.sleep(10)
 
 					payload_count += 1
@@ -145,7 +146,7 @@ def check_single_url_with_payload(x, payloads_per_thread, payload_path, target_u
 							print(e.blockquote.text)
 						if save_file_path:
 							lock.acquire()
-							with open(save_file_path, "a") as save_file:
+							with open_custom(save_file_path, "a",) as save_file:
 								save_file.write(target_url+payload + "\n")
 							lock.release()
 							print(f"LFI DETECTED: Saved to save file \n")
@@ -173,7 +174,7 @@ def check_single_url_with_payload(x, payloads_per_thread, payload_path, target_u
 def use_payload(x,payloads_per_thread,payload_path,target_url,targets_path,cookies,headers,save_file_path,to_extract):
 	if not target_url:
 		if os.path.isfile(url_list_path):
-			with open(url_list_path) as targets_file:
+			with open_custom(url_list_path, 'r') as targets_file:
 				for target in targets_file:
 					target = target.strip()
 					if target:
@@ -222,7 +223,7 @@ def load_proxies(proxy_path):
 
 	proxy_running = True
 	if os.path.isfile(proxy_path):
-		with open(proxy_path , "r") as proxy_file:
+		with open_custom(proxy_path , 'r') as proxy_file:
 			proxies = proxy_file.readlines()
 		proxies = list(filter(None, proxies)) #remove emptiness
 		proxies_but_dict = []
@@ -260,7 +261,7 @@ cookies = {}
 
 def load_authentication(auth_path , headers , cookies):
 	if os.path.isfile(auth_path):
-		with open(auth_path , "r") as auth_file:
+		with open_custom(auth_path , "r") as auth_file:
 			auth_data = auth_file.read()
 		auth_data = json.loads(auth_data)
 		#loading headers
