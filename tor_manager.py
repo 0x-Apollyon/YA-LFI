@@ -7,10 +7,9 @@ from stem import Signal
 from stem.control import Controller
 
 def start_tor_service():
-	print("[~] Starting Tor service...")
 	try:
 		subprocess.call(['sudo', 'service', 'tor', 'start'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-		print("[?] Tor service started.")
+		print("[*] TOR SERVICE STARTED")
 	except Exception as e:
 		print(f"[X] Failed to start Tor service: {str(e)}")
 
@@ -35,7 +34,6 @@ def is_port_open(port):
 		return result == 0
 
 def create_tor_instance(thread_num, tor_base_port=9050, tor_control_base_port=9151, tor_data_dir="/tmp/tor_profiles"):
-	print(f"[~] Thread {thread_num} | Starting Tor instance...")
 	while True:
 		instance_dir = f"{tor_data_dir}/tor_profile_{thread_num}"
 		os.makedirs(instance_dir, exist_ok=True)
@@ -52,7 +50,6 @@ def create_tor_instance(thread_num, tor_base_port=9050, tor_control_base_port=91
 			time.sleep(5)
 			with Controller.from_port(port=tor_control_base_port + thread_num * 10) as controller:
 				controller.authenticate()
-				print(f"[~] Thread {thread_num} | Tor instance started.")
 				break
 		except Exception as e:
 			print(f"[X] Thread {thread_num} | Failed to start Tor instance: {str(e)}")
