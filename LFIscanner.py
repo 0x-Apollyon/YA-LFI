@@ -80,7 +80,7 @@ def load_file_payloads():
 def replace_file_placeholder(payload, file_value):
 	return payload.replace("{FILE}", file_value)
 
-def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract):
+def check_single_url_with_payload(x, payloads_per_thread, payload_path, target_url, cookies, headers, save_file_path, to_extract):
 	global proxies_but_dict
 	global proxy_running
 	payloads = load_internal_payloads(payload_path)
@@ -107,7 +107,10 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 							tor_manager.rotate_tor_ip(x+1)
 							failure_count = 0
 
-						proxies = tor_manager.configure_proxies_for_thread(x+1)
+						proxies = {
+							'http': f'socks5://127.0.0.1:{9050 + 10 * x}',
+							'https': f'socks5://127.0.0.1:{9050 + 10 * x}'
+						}
 						query = requests.get(target_url+payload, headers=headers, proxies=proxies, cookies=cookies)
 
 						if parse.tor_rotation:
@@ -152,7 +155,7 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 			except RequestException:
 				failure_count += 1
 				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Error occurred while making request")
-				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Sleeping for 3 seconds then retrying payloads until error is resolved ...")
+				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status:  Sleeping for 3 seconds then retrying payloads until error is resolved ...")
 				time.sleep(3)
 				if failure_count >= 50:
 					print(f"[X] Thread {x+1} | Payload failed 50 times, stopping thread.")
@@ -161,7 +164,7 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 				failure_count += 1
 				if not last_msg_was_error:
 					print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Error occurred while resolving domain name. Are you sure the specified website exists and you are connected to the internet?")
-					print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Sleeping for 3 seconds then retrying payloads until error is resolved ...")
+					print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status:  Sleeping for 3 seconds then retrying payloads until error is resolved ...")
 					last_msg_was_error = True
 					time.sleep(3)
 				else:
