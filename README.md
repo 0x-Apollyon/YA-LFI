@@ -10,7 +10,7 @@
                                 
 ### Yet another - local file inclusion scanner
 ##### By: Apollyon
-##### Based on: LFIScanner by R3LI4NT  
+
 
 ## Commands
 
@@ -19,6 +19,8 @@
 | -h / --help | Request help |
 | -u / --url | Target Website |
 | -ulist / --url_list | Target multiple websites from file |
+| -ta / --test_all | Test all parameters of the given URL |
+| -to / --timeout | Set the timeout for requests |
 | -wiz / --wizard | Wizard for new users |
 | -p / --payload | Payload file |
 | -e / --extract | Extract content |
@@ -67,12 +69,19 @@ Windows wordlist
 ```
 python LFIscanner.py -u https://example.com?param= -p windows.txt
 ```
-WARNING: DO NOT RUN WITHOUT A PARAMETER IN THE URL
 
 ![image](https://github.com/user-attachments/assets/4e07bcd8-21a2-43e4-8551-8006460f8ce7) <br>
 ![image](https://github.com/user-attachments/assets/be6ae5a0-376b-4a95-899b-3f4d47c933fd)
 
+## Using with TOR
 
+If you want to use YA-LFI with TOR you can do the following <br>
+- Run the tor service
+- Add socks5://127.0.0.1:9050 to the proxy list
+- Run YA-LFI with the proxies flag
+
+Tor uses the port 9050 for socks proxies by default, so if you have changed that change the port aswell <br>
+You can also try @azuk4r's fork of YA-LFI [here](https://github.com/azuk4r/YA-LFI) which tries to implement tor rotation by defaults
 
 ## Other amazing third party wordlists
 
@@ -109,3 +118,7 @@ WARNING: DO NOT RUN WITHOUT A PARAMETER IN THE URL
 ?conf={payload}
 ```
 [Source](https://book.hacktricks.xyz/pentesting-web/file-inclusion)
+
+## Credits 
+##### Based on work by: LFIScanner by R3LI4NT  
+##### Special thanks to @azuk4r for giving ideas and testing it out in its early stages
