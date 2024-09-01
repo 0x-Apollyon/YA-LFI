@@ -1,4 +1,5 @@
-# ⚠️ This project is an early version of [YA-LFI by Apollyon](https://github.com/0x-Apollyon/YA-LFI)
+# ⚠️ This project is a version from an early stage of [YA-LFI by Apollyon](https://github.com/0x-Apollyon/YA-LFI)
+---
 <pre>
 ▄██   ▄      ▄████████           ▄█          ▄████████  ▄█  
 ███   ██▄   ███    ███          ███         ███    ███ ███  
