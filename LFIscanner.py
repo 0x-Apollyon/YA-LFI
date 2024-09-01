@@ -302,19 +302,27 @@ if not parse.wizard:
 		else:
 			current_target = r"https://" + parse.url
 
-		payloads_per_thread = payload_count//int(parse.threads)
+		payloads_per_thread = payload_count // int(parse.threads)
+		# SOLUTION: Even distribution of remaining tasks among threads
+		remaining_payloads = payload_count % int(parse.threads)
 
 		for x in range(int(parse.threads)):
-			threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract)).start()
+			start = x * payloads_per_thread
+			end = start + payloads_per_thread + (1 if x < remaining_payloads else 0)
+			threading.Thread(target=use_payload, args=(x, end - start, payload_path, current_target, False, cookies, headers, save_file_path, to_extract)).start()
 	else:
 		print(f"[*] RUNNING ON MULTIPLE TARGETS")
 		url_list_path = parse.url_list.lower()
 		if url_list_path:
 			if os.path.isfile(url_list_path):
-				payloads_per_thread = payload_count//int(parse.threads)
+				payloads_per_thread = payload_count // int(parse.threads)
+				# SOLUTION: Even distribution of remaining tasks among threads
+				remaining_payloads = payload_count % int(parse.threads)
 
 				for x in range(int(parse.threads)):
-					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers,save_file_path,to_extract)).start()
+					start = x * payloads_per_thread
+					end = start + payloads_per_thread + (1 if x < remaining_payloads else 0)
+					threading.Thread(target=use_payload, args=(x, end - start, payload_path, False, url_list_path, cookies, headers, save_file_path, to_extract)).start()
 			else:
 				print("[X] GIVEN TARGET URL FILE NOT FOUND")
 		else:
@@ -338,7 +346,9 @@ else:
 				payload_file = input("YA-LFI Wizard | Enter the path to payload list you want to use [Builtins: [1]all_os.txt , [2]linux.txt , [3]windows.txt]:").strip().lower()
 
 				payload_count , payload_path = count_payloads(payload_file)
-				payloads_per_thread = payload_count//threads_count
+				payloads_per_thread = payload_count // threads_count
+				# SOLUTION: Even distribution of remaining tasks among threads
+				remaining_payloads = payload_count % threads_count
 
 				proxy_file = input("YA-LFI Wizard | Enter the path for the proxy file if you want to use them, leave blank or enter no if you dont want to use proxies").strip().lower()
 				if proxy_file:
@@ -362,7 +372,9 @@ else:
 						to_extract = False
 
 				for x in range(threads_count):
-					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers,save_file_path,to_extract)).start()
+					start = x * payloads_per_thread
+					end = start + payloads_per_thread + (1 if x < remaining_payloads else 0)
+					threading.Thread(target=use_payload, args=(x, end - start, payload_path, False, url_list_path, cookies, headers, save_file_path, to_extract)).start()
 			else:
 				print("[X] GIVEN TARGET URL FILE NOT FOUND")
 
@@ -387,7 +399,9 @@ else:
 			payload_file = input("YA-LFI Wizard | Enter the path to payload list you want to use [Builtins: [1]all_os.txt , [2]linux.txt , [3]windows.txt]:").strip().lower()
 
 			payload_count , payload_path = count_payloads(payload_file)
-			payloads_per_thread = payload_count//threads_count
+			payloads_per_thread = payload_count // threads_count
+			# SOLUTION: Even distribution of remaining tasks among threads
+			remaining_payloads = payload_count % threads_count
 
 			proxy_file = input("YA-LFI Wizard | Enter the path for the proxy file if you want to use them, leave blank or enter no if you dont want to use proxies").strip().lower()
 			if proxy_file:
@@ -410,10 +424,10 @@ else:
 				case _:
 					to_extract = False
 
-			payloads_per_thread = payload_count//threads_count
-
 			for x in range(threads_count):
-				threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract)).start()
+				start = x * payloads_per_thread
+				end = start + payloads_per_thread + (1 if x < remaining_payloads else 0)
+				threading.Thread(target=use_payload, args=(x, end - start, payload_path, current_target, False, cookies, headers, save_file_path, to_extract)).start()
 
 		case _:
 			print("[X] NOT A VALID OPTION PLEASE RE LAUNCH THE PROGRAM AND SELECT AN AVAILABLE OPTION")
