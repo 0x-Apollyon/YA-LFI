@@ -1,3 +1,4 @@
+# ⚠️ This project is an early version of [YA-LFI by Apollyon](https://github.com/0x-Apollyon/YA-LFI)
 <pre>
 ▄██   ▄      ▄████████           ▄█          ▄████████  ▄█  
 ███   ██▄   ███    ███          ███         ███    ███ ███  
@@ -9,7 +10,7 @@
  ▀█████▀    ███    █▀           █████▄▄██   ███        █▀   </pre>
                                 
 ### Yet another - local file inclusion scanner
-##### By: Apollyon
+##### By: Apollyon, azuk4r
 ##### Based on: LFIScanner by R3LI4NT  
 
 ## Commands
