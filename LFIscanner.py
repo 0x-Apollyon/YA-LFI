@@ -106,7 +106,7 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 	print(f"Thread number {x+1} launched on URL {target_url} Checking payloads ...")
 	last_msg_was_error = False
 	for p in payloads:
-		#try:
+		try:
 			if pointer_line > (x*payloads_per_thread) and pointer_line < ((x+1)*payloads_per_thread): 
 				p = p.strip()
 				
@@ -141,22 +141,22 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 					print("="*10)
 			pointer_line = pointer_line + 1
 			last_msg_was_error = False
-		#except RequestException:
-		#	if not last_msg_was_error:
-		#		print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Error occured while making request")
-		#		print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status:  Sleeping for 3 seconds then retrying payloads untill error is resolved ...")
-		#		last_msg_was_error = True
-		#		time.sleep(3)
-		#	else:
-		#		time.sleep(3)
-		#except NameResolutionError:
-		#	if not last_msg_was_error:
-		#		print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status:  Error occured while resolving domain name. Are you sure the specified website exists and you are connected to the internet ?")
-		#		print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status:  Sleeping for 3 seconds then retrying payloads untill error is resolved ...")
-		#		last_msg_was_error = True
-		#		time.sleep(3)
-		#	else:
-		#		time.sleep(3)
+		except RequestException:
+			if not last_msg_was_error:
+				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Error occured while making request")
+				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status:  Sleeping for 3 seconds then retrying payloads untill error is resolved ...")
+				last_msg_was_error = True
+				time.sleep(3)
+			else:
+				time.sleep(3)
+		except NameResolutionError:
+			if not last_msg_was_error:
+				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status:  Error occured while resolving domain name. Are you sure the specified website exists and you are connected to the internet ?")
+				print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status:  Sleeping for 3 seconds then retrying payloads untill error is resolved ...")
+				last_msg_was_error = True
+				time.sleep(3)
+			else:
+				time.sleep(3)
 
 def url_parameterizing(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins,to_test_all,req_timeout):
 
