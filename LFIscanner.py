@@ -95,7 +95,7 @@ def load_internal_payloads(payload_path):
 		print("[X] SPECIFIED PAYLOADS NOT FOUND. PLEASE REINSTALL TOOL OR PAYLOAD FILE")
 		quit()
 
-def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract,req_timeout):
+def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract,req_timeout,excess_payloads):
 
 	global proxies_but_dict
 	global proxy_running
@@ -107,7 +107,7 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 	last_msg_was_error = False
 	for p in payloads:
 		try:
-			if pointer_line > (x*payloads_per_thread) and pointer_line < ((x+1)*payloads_per_thread): 
+			if pointer_line > (x*payloads_per_thread) and pointer_line < (((x+1)*payloads_per_thread)+excess_payloads): 
 				p = p.strip()
 				
 				if proxy_running:
@@ -158,7 +158,7 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 			else:
 				time.sleep(3)
 
-def url_parameterizing(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins,to_test_all,req_timeout):
+def url_parameterizing(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins,to_test_all,req_timeout,excess_payloads):
 
 	#here were parse the target url tuple to allow scanning for each and every param and proper auth stuff
 	#structure of the tuple target url is ('full url', 'params', 'domain+tld', 'protocol' , 'path')
@@ -227,12 +227,11 @@ def url_parameterizing(x,payloads_per_thread,payload_path,target_url,cookies,hea
 			something_raw = r"://"	
 			actual_target_url_2 = f"{target_url[3]}{something_raw}{actual_target_url_2}{select_param}="
 			
-			print("a")
-			check_single_url_with_payload(x,payloads_per_thread,payload_path,actual_target_url_2,cookies,headers,save_file_path,to_extract,req_timeout)
+			check_single_url_with_payload(x,payloads_per_thread,payload_path,actual_target_url_2,cookies,headers,save_file_path,to_extract,req_timeout,excess_payloads)
 	else:
-		check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url[0],cookies,headers,save_file_path,to_extract,req_timeout)
+		check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url[0],cookies,headers,save_file_path,to_extract,req_timeout,excess_payloads)
 
-def use_payload(x,payloads_per_thread,payload_path,target_url,targets_path,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins,to_test_all,req_timeout):
+def use_payload(x,payloads_per_thread,payload_path,target_url,targets_path,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins,to_test_all,req_timeout,excess_payloads):
 	if not target_url:
 		if os.path.isfile(url_list_path):
 			with open(url_list_path) as targets_file:
@@ -240,12 +239,12 @@ def use_payload(x,payloads_per_thread,payload_path,target_url,targets_path,cooki
 					target = target.strip()
 					if target:
 						target = parse_url(target)
-						url_parameterizing(x,payloads_per_thread,payload_path,target,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins,to_test_all,req_timeout)
+						url_parameterizing(x,payloads_per_thread,payload_path,target,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins,to_test_all,req_timeout,excess_payloads)
 		else:
 			print("[X] NO TARGET URL SPECIFIED")
 			quit()
 	else:
-		url_parameterizing(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins,to_test_all,req_timeout)
+		url_parameterizing(x,payloads_per_thread,payload_path,target_url,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins,to_test_all,req_timeout,excess_payloads)
 
 
 def count_payloads(payload_input):
@@ -383,22 +382,33 @@ if not parse.wizard:
 	else:
 		save_file_path = False
 
+	if int(parse.threads) < 1:
+		print("[X] NUMBER OF THREADS CANT BE LESS THAN ZERO")
+		quit()
+
 	if parse.url:
 		print(f"[*] RUNNING ON TARGET ---> {parse.url}")
 		current_target = parse_url(parse.url)
-		payloads_per_thread = payload_count//int(parse.threads)
 
-		for x in range(int(parse.threads)):
-			threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout)).start()	
+		payloads_per_thread = payload_count//int(parse.threads)
+		excess_payloads = int(payload_count%(int(parse.threads)))
+
+		for x in range(int(parse.threads)-1):
+			threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout,0)).start()	
+		else:
+			threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout,excess_payloads)).start()	
 	else:
 		print(f"[*] RUNNING ON MULTIPLE TARGETS")
 		url_list_path = parse.url_list.lower()
 		if url_list_path:
 			if os.path.isfile(url_list_path):
 				payloads_per_thread = payload_count//int(parse.threads)
+				excess_payloads = int(payload_count%(int(parse.threads)))
 
-				for x in range(int(parse.threads)):
-					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout)).start()	
+				for x in range(int(parse.threads)-1):
+					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout,0)).start()	
+				else:
+					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout,excess_payloads)).start()	
 			else:
 				print("[X] GIVEN TARGET URL FILE NOT FOUND")	
 		else:
@@ -412,10 +422,11 @@ else:
 			if os.path.isfile(url_list_path):
 				threads_count = input("YA-LFI Wizard | How many threads do you want to use :").strip()
 				try:
-					if threads_count:
+					if threads_count > 0:
 						threads_count = int(threads_count)
 					else:
-						threads_count = 5
+						print("[X] NUMBER OF THREADS CANT BE LESS THAN ZERO")
+						quit()
 				except:
 					threads_count = 5
 
@@ -433,8 +444,7 @@ else:
 
 				payload_count , payload_path = count_payloads(payload_file)
 				payloads_per_thread = payload_count//threads_count
-
-
+				excess_payloads = int(payload_count%threads_count)
 
 				req_timeout = input("YA-LFI Wizard | Enter the timeout value for each request in seconds :").strip().lower()
 				try:
@@ -463,8 +473,10 @@ else:
 					case _:
 						to_extract = False
 
-				for x in range(threads_count):
-					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout)).start()		
+				for x in range(threads_count-1):
+					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout,0)).start()	
+				else:
+					threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,False,url_list_path,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout,excess_payloads)).start()	
 			else:
 				print("[X] GIVEN TARGET URL FILE NOT FOUND")	
 
@@ -476,10 +488,11 @@ else:
 
 			threads_count = input("YA-LFI Wizard | How many threads do you want to use :").strip()
 			try:
-				if threads_count:
+				if threads_count > 0:
 					threads_count = int(threads_count)
 				else:
-					threads_count = 5
+					print("[X] NUMBER OF THREADS CANT BE LESS THAN ZERO")
+					quit()
 			except:
 				threads_count = 5
 
@@ -495,8 +508,7 @@ else:
 
 			payload_file = input("YA-LFI Wizard | Enter the path to payload list you want to use [Builtins: [1]all_os.txt , [2]linux.txt , [3]windows.txt]:").strip().lower()
 
-			payload_count , payload_path = count_payloads(payload_file)
-			payloads_per_thread = payload_count//threads_count
+			payload_count , payload_path = count_payloads(payload_file)			
 
 			req_timeout = input("YA-LFI Wizard | Enter the timeout value for each request in seconds [10 seconds by default]:").strip().lower()
 			try:
@@ -527,9 +539,12 @@ else:
 
 
 			payloads_per_thread = payload_count//threads_count
+			excess_payloads = int(payload_count%threads_count)
 
-			for x in range(threads_count):
-				threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout)).start()	
+			for x in range(threads_count-1):
+				threading.Thread(target=use_payload, args=(x,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout,0)).start()
+			else:
+				threading.Thread(target=use_payload, args=(threads_count-1,payloads_per_thread,payload_path,current_target,False,cookies,headers,save_file_path,to_extract,url_schema_logins,special_cookies,special_headers,special_url_schema_logins , to_test_all,req_timeout,excess_payloads)).start()		
 
 		case _:	
 			print("[X] NOT A VALID OPTION PLEASE RE LAUNCH THE PROGRAM AND SELECT AN AVAILABLE OPTION")
