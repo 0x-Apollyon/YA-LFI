@@ -103,7 +103,7 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 	
 	payload_count = 0
 	pointer_line = 0
-	print(f"Thread number {x+1} launched on URL {target_url} Checking payloads ...")
+	print(f"[*] Thread number {x+1} launched on URL {target_url} Checking payloads ...")
 	last_msg_was_error = False
 	for p in payloads:
 		try:
@@ -120,7 +120,7 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 					print(f"[!] Thread {x+1} | Running on URL: {target_url} | Status: Checked {payload_count} payloads...")
 				if "root" in query.text and "bash" in query.text and r"/bin" in query.text and query.status_code//100 == 2:
 					print("="*10)
-					print(f"LFI DETECTED:\n URL + Payload: {target_url+p}\n\n")
+					print(f"[!] LFI DETECTED:\n URL + Payload: {target_url+p}\n\n")
 					if to_extract:
 						e = BeautifulSoup(query.text,'html5lib')
 						print(e.blockquote.text)
@@ -137,7 +137,7 @@ def check_single_url_with_payload(x,payloads_per_thread,payload_path,target_url,
 								save_file.write(target_url+p)
 								save_file.write("\n")
 							lock.release()
-						print(f"LFI DETECTED: Saved to save file \n")
+						print(f"[!] LFI DETECTED: Saved to save file \n")
 					print("="*10)
 			pointer_line = pointer_line + 1
 			last_msg_was_error = False
