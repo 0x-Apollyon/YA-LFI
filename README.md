@@ -81,7 +81,6 @@ If you want to use YA-LFI with TOR you can do the following <br>
 - Run YA-LFI with the proxies flag
 
 Tor uses the port 9050 for socks proxies by default, so if you have changed that change the port aswell <br>
-You can also try @azuk4r's fork of YA-LFI [here](https://github.com/azuk4r/YA-LFI) which tries to implement tor rotation by defaults
 
 ## Other amazing third party wordlists
 
